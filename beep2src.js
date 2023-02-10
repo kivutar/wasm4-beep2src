@@ -105,11 +105,13 @@ let BeepBox = {
  */
 let Music = {
   /** Variable name. */
-  name : arguments[1].toString().trim().toUpperCase(),
-  /** Instrument in use. */
-  instrument: 0,
-  /** Track notes. */
-  notes: []
+  name : arguments[1].toString().trim(),
+  channels: [
+	  { instrument: 0, notes: [] },
+	  { instrument: 0, notes: [] },
+	  { instrument: 0, notes: [] },
+	  { instrument: 0, notes: [] },
+  ]
 };
 
 /**
@@ -119,7 +121,7 @@ let Music = {
  *
  * @return {Object}
  */
-Music.createNote = function(note) {
+Music.createNote = function(patIndex, note) {
   // Get note index...
   let noteIndex = BeepBox.notes.indexOf(note.pitches[0]);
 
@@ -131,8 +133,8 @@ Music.createNote = function(note) {
   // Description object.
   let noteObject = {
     pitch   : note.pitches[0],
-    start   : note.points[0].tick,
-    end     : note.points[1].tick,
+    start   : note.points[0].tick+patIndex*32,
+    end     : note.points[1].tick+patIndex*32,
     tone    : noteIndex,
     sustain : 5,
     duration: (note.points[1].tick - note.points[0].tick)
@@ -172,14 +174,19 @@ Music.print = function() {
   let text = "";
 
   // Iterate through each note and concatenate text...
-  for(let i = 0; i < 32; i += 1) {
-    let note = Music.notes[i] || Music.createNoteEmpty();
-    text += `(0x${note.tone.toString(16).padStart(2,0)},0x${note.sustain.toString(16).padStart(2,0)},0x00),`;
-
-    // Remove comma from last element...
-    if(i > 30) {
-      text = text.substring(0, text.length - 1);
+  for(let j = 0; j < Music.channels.length; j ++) {
+    const channel = Music.channels[j];
+	const wave = BeepBox.waves.indexOf(channel.instrument.wave);
+    text += `\t\t{\n`;
+    text += `\t\t\tinstrument: ${wave >= 0 ? wave : 0},\n`;
+    text += `\t\t\ttones: [][3]byte{\n`;
+    for(let i = 0; i < channel.notes.length; i++) {
+      let note = channel.notes[i] || Music.createNoteEmpty();
+		if(channel.notes[i])
+      text += `\t\t\t\t{0x${note.tone.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}, 0x00},\n`;
     }
+    text += `\t\t\t},\n`;
+    text += `\t\t},\n`;
   }
 
   return text;
@@ -187,55 +194,46 @@ Music.print = function() {
 
 // Fill soundtrack with empty notes. They will be replaced by actual notes
 // when the data file is processed...
-for(let i = 0; i < 32; i += 1) {
-  Music.notes[i] = Music.createNoteEmpty();
+for(let j = 0; j < Music.channels.length; j++) {
+  for(let i = 0; i < 32; i++) {
+    Music.channels[j].notes[i] = Music.createNoteEmpty();
+  }
 }
 
 /** Ticks per beat. */
 let ticks = data.ticksPerBeat;
 
-/** Main channel (only the first track is supported). */
-let channel = data.channels[0];
-
-/** Wave name in use. */
-let instrument = channel.instruments[0];
-
-/** Track pattern (only the first is supported). */
-let pattern = channel.patterns[0];
-
-/** Soundtrack notes. */
-let notes = pattern.notes;
-
-// Iterate through the track...
-for(let noteIndex in notes) {
-  let note = notes[noteIndex];
-
-  // Description object.
-  let noteObject = Music.createNote(note);
-
-  // Save music...
-  Music.notes[noteObject.start] = noteObject;
-}
-
-// Get instrument index...
-Music.instrument = BeepBox.waves.indexOf(instrument.wave);
-
-// Revert back to zero if it doesn't exist or it's not supported...
-if(Music.instrument < 0) {
-  Music.instrument = 0;
+for(let ci in data.channels) {
+  let channel = data.channels[ci];
+  
+  /** Wave name in use. */
+  Music.channels[ci].instrument = channel.instruments[0];
+  
+  // Iterate through the track...
+  for(let pi in channel.patterns) {
+    let notes = channel.patterns[pi].notes
+    for(let ni in notes) {
+      let note = notes[ni];
+  
+      // Description object.
+      let noteObject = Music.createNote(pi, note);
+  
+      // Save music...
+      Music.channels[ci].notes[noteObject.start] = noteObject;
+    }
+  }
 }
 
 // Print track...
-result += `/// Soundtrack: *${Music.name}*
-static mut ${Music.name}: Track = Track {
-    next      : 0,
-    wait      : 0,
-    ticks     : ${ticks},
-    instrument: ${Music.instrument},
-    flags     : (0,0),
-    tones: [ ${Music.print()} ],
-};
-`;
+result += `package main
+
+// Soundtrack: ${Music.name}
+var ${Music.name} = Track{
+\tticks: ${ticks},
+\tchannels: []*Channel{
+${Music.print()}
+\t},
+}`;
 
 // Result.
 console.log(result);
