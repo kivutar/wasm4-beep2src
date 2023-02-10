@@ -110,7 +110,6 @@ let Music = {
 	  { instrument: 0, notes: [] },
 	  { instrument: 0, notes: [] },
 	  { instrument: 0, notes: [] },
-	  { instrument: 0, notes: [] },
   ]
 };
 
@@ -126,8 +125,8 @@ Music.createNote = function(patIndex, note) {
   let noteIndex = BeepBox.notes.indexOf(note.pitches[0]);
 
   // Check if note index is valid...
-  if(noteIndex <= 0 || isNaN(noteIndex)) {
-    noteIndex = 0xFF;
+  if(noteIndex < 0 || isNaN(noteIndex)) {
+    return null;
   }
 
   // Description object.
@@ -149,22 +148,6 @@ Music.createNote = function(patIndex, note) {
 };
 
 /**
- * Create an empty description note.
- *
- * @return {Object}
- */
-Music.createNoteEmpty = function() {
-  return {
-    pitch   : null,
-    start   : null,
-    end     : null,
-    tone    : 0xFF,
-    sustain : 5,
-    duration: null
-  };
-};
-
-/**
  * Print every saved note in array format (text).
  *
  * @return {string}
@@ -179,11 +162,10 @@ Music.print = function() {
 	const wave = BeepBox.waves.indexOf(channel.instrument.wave);
     text += `\t\t{\n`;
     text += `\t\t\tinstrument: ${wave >= 0 ? wave : 0},\n`;
-    text += `\t\t\ttones: [][3]byte{\n`;
+    text += `\t\t\ttones: [][4]byte{\n`;
     for(let i = 0; i < channel.notes.length; i++) {
-      let note = channel.notes[i] || Music.createNoteEmpty();
-		if(channel.notes[i])
-      text += `\t\t\t\t{0x${note.tone.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}, 0x00},\n`;
+      let note = channel.notes[i];
+      text += `\t\t\t\t{0x${note.start.toString(16).padStart(2,0)}, 0x${note.tone.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}, 0x00},\n`;
     }
     text += `\t\t\t},\n`;
     text += `\t\t},\n`;
@@ -192,18 +174,12 @@ Music.print = function() {
   return text;
 };
 
-// Fill soundtrack with empty notes. They will be replaced by actual notes
-// when the data file is processed...
-for(let j = 0; j < Music.channels.length; j++) {
-  for(let i = 0; i < 32; i++) {
-    Music.channels[j].notes[i] = Music.createNoteEmpty();
-  }
-}
-
 /** Ticks per beat. */
 let ticks = data.ticksPerBeat;
 
 for(let ci in data.channels) {
+  if (ci >= 3) continue;
+
   let channel = data.channels[ci];
   
   /** Wave name in use. */
@@ -219,7 +195,8 @@ for(let ci in data.channels) {
       let noteObject = Music.createNote(pi, note);
   
       // Save music...
-      Music.channels[ci].notes[noteObject.start] = noteObject;
+      if(noteObject)
+        Music.channels[ci].notes.push(noteObject);
     }
   }
 }
