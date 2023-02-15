@@ -68,27 +68,13 @@ if(arguments[2].toString().trim().toLowerCase() === "true") {
 let BeepBox = {
   /** Musical note indexes, sorted by pitch. */
   notes: [
+    18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31, 32, 33, 34, 35,
     36, 37, 38, 39, 40, 41, 42, 43, 44,
     45, 46, 47, 48, 49, 50, 51, 52, 53,
     54, 55, 56, 57, 58, 59, 60, 61, 62,
     63, 64, 65, 66, 67, 68, 69, 70, 71,
     72
-  ],
-  /** Musical note names. */
-  names: [
-     "C0", "D+0",  "D0", "E+0",  "E0",  "F0", "F#0",  "G0", "A+0",
-     "A0", "B+0",  "B0",  "C1", "D+1",  "D1", "E+1",  "E1",  "F1",
-    "F#1",  "G1", "A+1",  "A1", "B+1",  "B1",  "C2", "D+2",  "D2",
-    "E+2",  "E2",  "F2", "F#2",  "G2", "A+2",  "A2", "B+2",  "B2",
-     "C3"
-  ],
-  /** WASM-4 equivalent of musical tones, using the same musical notes. */
-  tones: [
-     130,  140,  150,  160,  170,  180,  190,  200,  210,
-     220,  230,  250,  260,  280,  290,  310,  330,  350,
-     370,  390,  410,  440,  460,  490,  520,  550,  600,
-     620,  660,  700,  750,  780,  840,  880,  940,  980,
-    1000
   ],
   /** Waves (instruments) available for use. */
   waves: [
@@ -110,6 +96,8 @@ let Music = {
 	  { instrument: 0, notes: [] },
 	  { instrument: 0, notes: [] },
 	  { instrument: 0, notes: [] },
+	  { instrument: 0, notes: [] },
+	  { instrument: 0, notes: [] },
   ]
 };
 
@@ -126,6 +114,7 @@ Music.createNote = function(patIndex, note) {
 
   // Check if note index is valid...
   if(noteIndex < 0 || isNaN(noteIndex)) {
+    console.log('note not found', note.pitches[0]);
     return null;
   }
 
@@ -162,10 +151,10 @@ Music.print = function() {
 	const wave = BeepBox.waves.indexOf(channel.instrument.wave);
     text += `\t\t{\n`;
     text += `\t\t\tinstrument: ${wave >= 0 ? wave : 0},\n`;
-    text += `\t\t\ttones: [][4]byte{\n`;
+    text += `\t\t\ttones: [][3]uint16{\n`;
     for(let i = 0; i < channel.notes.length; i++) {
       let note = channel.notes[i];
-      text += `\t\t\t\t{0x${note.start.toString(16).padStart(2,0)}, 0x${note.tone.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}, 0x00},\n`;
+      text += `\t\t\t\t{0x${note.start.toString(16).padStart(2,0)}, 0x${note.tone.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}},\n`;
     }
     text += `\t\t\t},\n`;
     text += `\t\t},\n`;
@@ -178,7 +167,7 @@ Music.print = function() {
 let ticks = data.ticksPerBeat;
 
 for(let ci in data.channels) {
-  if (ci >= 3) continue;
+  if (ci >= Music.channels.length) continue;
 
   let channel = data.channels[ci];
   
