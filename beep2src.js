@@ -66,16 +66,6 @@ if(arguments[2].toString().trim().toLowerCase() === "true") {
  *   end of the music.
  */
 let BeepBox = {
-  /** Musical note indexes, sorted by pitch. */
-  notes: [
-    18, 19, 20, 21, 22, 23, 24, 25, 26,
-    27, 28, 29, 30, 31, 32, 33, 34, 35,
-    36, 37, 38, 39, 40, 41, 42, 43, 44,
-    45, 46, 47, 48, 49, 50, 51, 52, 53,
-    54, 55, 56, 57, 58, 59, 60, 61, 62,
-    63, 64, 65, 66, 67, 68, 69, 70, 71,
-    72
-  ],
   /** Waves (instruments) available for use. */
   waves: [
     "triangle",
@@ -109,21 +99,11 @@ let Music = {
  * @return {Object}
  */
 Music.createNote = function(patIndex, note) {
-  // Get note index...
-  let noteIndex = BeepBox.notes.indexOf(note.pitches[0]);
-
-  // Check if note index is valid...
-  if(noteIndex < 0 || isNaN(noteIndex)) {
-    console.log('note not found', note.pitches[0]);
-    return null;
-  }
-
   // Description object.
   let noteObject = {
     pitch   : note.pitches[0],
     start   : note.points[0].tick+patIndex*32,
     end     : note.points[1].tick+patIndex*32,
-    tone    : noteIndex,
     sustain : 5,
     duration: (note.points[1].tick - note.points[0].tick)
   };
@@ -154,7 +134,7 @@ Music.print = function() {
     text += `\t\t\ttones: [][3]uint16{\n`;
     for(let i = 0; i < channel.notes.length; i++) {
       let note = channel.notes[i];
-      text += `\t\t\t\t{0x${note.start.toString(16).padStart(2,0)}, 0x${note.tone.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}},\n`;
+      text += `\t\t\t\t{0x${note.start.toString(16).padStart(2,0)}, 0x${note.pitch.toString(16).padStart(2,0)}, 0x${note.sustain.toString(16).padStart(2,0)}},\n`;
     }
     text += `\t\t\t},\n`;
     text += `\t\t},\n`;
