@@ -83,11 +83,10 @@ let Music = {
   /** Variable name. */
   name : arguments[1].toString().trim(),
   channels: [
-	  { instrument: 0, notes: [] },
-	  { instrument: 0, notes: [] },
-	  { instrument: 0, notes: [] },
-	  { instrument: 0, notes: [] },
-	  { instrument: 0, notes: [] },
+	  { instrument: 0, volume: 100, notes: [] },
+	  { instrument: 0, volume: 100, notes: [] },
+	  { instrument: 0, volume: 100, notes: [] },
+	  { instrument: 0, volume: 100, notes: [] },
   ]
 };
 
@@ -98,12 +97,12 @@ let Music = {
  *
  * @return {Object}
  */
-Music.createNote = function(patIndex, note) {
+Music.createNote = function(seqIndex, note) {
   // Description object.
   let noteObject = {
     pitch   : note.pitches[0],
-    start   : note.points[0].tick+patIndex*32,
-    end     : note.points[1].tick+patIndex*32,
+    start   : note.points[0].tick+seqIndex*32,
+    end     : note.points[1].tick+seqIndex*32,
     sustain : 5,
     duration: (note.points[1].tick - note.points[0].tick)
   };
@@ -128,9 +127,11 @@ Music.print = function() {
   // Iterate through each note and concatenate text...
   for(let j = 0; j < Music.channels.length; j ++) {
     const channel = Music.channels[j];
-	const wave = BeepBox.waves.indexOf(channel.instrument.wave);
+	const wave = channel.instrument;
+	const volume = channel.volume;
     text += `\t\t{\n`;
-    text += `\t\t\tinstrument: ${wave >= 0 ? wave : 0},\n`;
+    text += `\t\t\tinstrument: ${wave},\n`;
+    text += `\t\t\tvolume: ${volume},\n`;
     text += `\t\t\ttones: [][3]uint16{\n`;
     for(let i = 0; i < channel.notes.length; i++) {
       let note = channel.notes[i];
@@ -150,18 +151,21 @@ for(let ci in data.channels) {
   if (ci >= Music.channels.length) continue;
 
   let channel = data.channels[ci];
-  
-  /** Wave name in use. */
-  Music.channels[ci].instrument = channel.instruments[0];
+  let seq = channel.sequence;
+  Music.channels[ci].instrument = ci;
+  Music.channels[ci].volume = channel.instruments[0].volume;
   
   // Iterate through the track...
-  for(let pi in channel.patterns) {
-    let notes = channel.patterns[pi].notes
+  for(let si in seq) {
+	let pi = seq[si];
+	if (pi == 0) { continue }
+    let notes = channel.patterns[pi-1].notes
+
     for(let ni in notes) {
       let note = notes[ni];
   
       // Description object.
-      let noteObject = Music.createNote(pi, note);
+      let noteObject = Music.createNote(si, note);
   
       // Save music...
       if(noteObject)
