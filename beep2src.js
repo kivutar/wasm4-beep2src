@@ -146,6 +146,7 @@ Music.print = function() {
 
 /** Ticks per beat. */
 let ticks = data.ticksPerBeat;
+let sequences = data.channels[0].sequence.length;
 
 for(let ci in data.channels) {
   if (ci >= Music.channels.length) continue;
@@ -180,6 +181,7 @@ result += `package main
 // Soundtrack: ${Music.name}
 var ${Music.name} = Track{
 \tticks: ${ticks},
+\tsequences: ${sequences},
 \tchannels: []*Channel{
 ${Music.print()}
 \t},
